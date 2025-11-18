@@ -38,11 +38,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'Furs_and_Coats_App',
-    'drf_yasg'
+    'drf_yasg',
+    'rest_framework',
 ]
 
 REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_yasg.openapi.AutoSchema',
+    # 'DEFAULT_SCHEMA_CLASS': 'drf_yasg.openapi.AutoSchema',
 }
 
 MIDDLEWARE = [
