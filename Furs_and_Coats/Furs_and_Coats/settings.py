@@ -37,8 +37,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'Furs_and_Coats_App'
+    'Furs_and_Coats_App',
+    'drf_yasg'
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_yasg.openapi.AutoSchema',
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -75,8 +80,12 @@ WSGI_APPLICATION = 'Furs_and_Coats.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'F&C_Shop',
+        'USER': 'postgres',
+        'PASSWORD': '401330',
+        'HOST': 'localhost',
+        'PORT': '5433'
     }
 }
 
