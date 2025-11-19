@@ -1,10 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+{% load static %}
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Autorization</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Авторизация - Furs and Coats</title>
+    <link rel="StyleSheet" href="{% static 'css/index.css'%}"/>
 </head>
 <body>
-
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Добро пожаловать</h1>
+                <p>Войдите в свой аккаунт</p>
+            </div>
+            
+            <form class="auth-form" method="POST" action="#">
+                <div class="form-group">
+                    <label for="email">Email или логин</label>
+                    <input 
+                        type="text" 
+                        id="email" 
+                        name="email" 
+                        placeholder="Введите email или логин"
+                        required
+                        autocomplete="username"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Пароль</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Введите пароль"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+                
+                <div class="form-options">
+                    <label class="remember-me">
+                        <input type="checkbox" name="remember">
+                        <span>Запомнить меня</span>
+                    </label>
+                    <a href="#" class="forgot-password">Забыли пароль?</a>
+                </div>
+                
+                <button type="submit" class="submit-btn">
+                    <span>Войти</span>
+                </button>
+                
+                <div class="auth-footer">
+                    <p>Нет аккаунта? <a href="{% url 'registration' %}" class="register-link">Зарегистрироваться</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
 </body>
 </html>

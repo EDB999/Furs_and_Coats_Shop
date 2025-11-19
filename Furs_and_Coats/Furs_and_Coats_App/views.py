@@ -1,4 +1,5 @@
 from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
@@ -9,7 +10,11 @@ from Furs_and_Coats_App.models import Product
 
 
 def index(request):
-    return HttpResponse("Главная")
+    return render(request, "index.html")
+
+
+def registration(request):
+    return render(request, "registration.html")
 
 
 # Тестовые API endpoints для Swagger

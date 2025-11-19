@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация - Furs and Coats</title>
+    <link rel="StyleSheet" href="{% static 'css/registration.css'%}"/>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Создать аккаунт</h1>
+                <p>Заполните форму для регистрации</p>
+            </div>
+            
+            <form class="auth-form" method="POST" action="#">
+                <div class="form-group">
+                    <label for="full_name">ФИО</label>
+                    <input 
+                        type="text" 
+                        id="full_name" 
+                        name="full_name" 
+                        placeholder="Введите ваше полное имя"
+                        required
+                        autocomplete="name"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="Введите ваш email"
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Телефон</label>
+                    <input 
+                        type="tel" 
+                        id="phone" 
+                        name="phone" 
+                        placeholder="+7 (999) 123-45-67"
+                        autocomplete="tel"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Пароль</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Введите пароль"
+                        required
+                        autocomplete="new-password"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="confirm_password">Подтвердите пароль</label>
+                    <input 
+                        type="password" 
+                        id="confirm_password" 
+                        name="confirm_password" 
+                        placeholder="Повторите пароль"
+                        required
+                        autocomplete="new-password"
+                    >
+                </div>
+                
+                <div class="form-options">
+                    <label class="remember-me">
+                        <input type="checkbox" name="agree" required>
+                        <span>Я согласен с <a href="#" class="terms-link">условиями использования</a></span>
+                    </label>
+                </div>
+                
+                <button type="submit" class="submit-btn">
+                    <span>Зарегистрироваться</span>
+                </button>
+                
+                <div class="auth-footer">
+                    <p>Уже есть аккаунт? <a href="{% url 'index' %}" class="login-link">Войти</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
