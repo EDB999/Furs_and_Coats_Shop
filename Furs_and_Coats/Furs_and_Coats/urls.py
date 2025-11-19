@@ -27,8 +27,10 @@ urlpatterns = [
     # Тестовые API endpoints
     path('api/', views.api_overview, name='api-overview'),
     path('api/user-info/', views.user_info, name='user-info'),
+    path('api/products/', views.product_list_api, name='product-list'),
 
     # Swagger документация
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+
 ]
