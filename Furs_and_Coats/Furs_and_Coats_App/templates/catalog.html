@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Каталог - Furs and Coats</title>
+    <link rel="stylesheet" href="{% static 'css/catalog.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="{% url 'index' %}">Furs and Coats</a>
+            </div>
+            <nav class="main-nav">
+                <a href="{% url 'index' %}" class="nav-link">Главная</a>
+                <a href="{% url 'catalog' %}" class="nav-link active">Каталог</a>
+                <a href="#" class="nav-link">Корзина</a>
+                <a href="#" class="nav-link">Оплата</a>
+                <a href="{% url 'registration' %}" class="nav-link">Регистрация</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="catalog-container">
+        <div class="catalog-header">
+            <h1>Каталог товаров</h1>
+            <p>Выберите из нашего ассортимента</p>
+        </div>
+
+        <div class="swiper-wrapper-container">
+            <div class="swiper-controls-wrapper">
+                <div class="swiper-button-prev"></div>
+                <div class="swiper catalog-swiper">
+                    <div class="swiper-wrapper">
+                        {% for product in products %}
+                        <div class="swiper-slide">
+                            <div class="product-card">
+                                <div class="product-image-placeholder">
+                                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                                        <rect width="200" height="200" fill="#f0f0f0"/>
+                                        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" 
+                                              font-family="Arial" font-size="16" fill="#999">Нет изображения</text>
+                                    </svg>
+                                </div>
+                                <div class="product-info">
+                                    <h3 class="product-name">{{ product.name }}</h3>
+                                    <p class="product-description">{{ product.description|truncatewords:15 }}</p>
+                                    <div class="product-details">
+                                        <div class="detail-item">
+                                            <span class="detail-label">Размер:</span>
+                                            <span class="detail-value">{{ product.size }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Материал:</span>
+                                            <span class="detail-value">{{ product.material }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <span class="detail-label">Цвет:</span>
+                                            <span class="detail-value">{{ product.color }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="product-footer">
+                                        <div class="product-price">
+                                            <span class="price-value">{{ product.price }}</span>
+                                            <span class="price-currency">₽</span>
+                                        </div>
+                                        <div class="product-stock">
+                                            {% if product.in_stock %}
+                                                <span class="stock-badge in-stock">В наличии</span>
+                                            {% else %}
+                                                <span class="stock-badge out-of-stock">Нет в наличии</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <button class="product-btn">В корзину</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="swiper-button-next"></div>
+            </div>
+            <div class="swiper-pagination-container">
+                <div class="swiper-pagination"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const paginationEl = document.querySelector('.swiper-pagination');
+            if (!paginationEl) {
+                console.error('Pagination element not found!');
+            }
+            
+            const swiper = new Swiper('.catalog-swiper', {
+                slidesPerView: 1,
+                spaceBetween: 30,
+                loop: true,
+                autoplay: {
+                    delay: 3000,
+                    disableOnInteraction: false,
+                },
+                pagination: {
+                    el: '.swiper-pagination',
+                    clickable: true,
+                    renderBullet: function (index, className) {
+                        return '<span class="' + className + '"></span>';
+                    },
+                },
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+                breakpoints: {
+                    640: {
+                        slidesPerView: 2,
+                        spaceBetween: 20,
+                    },
+                    768: {
+                        slidesPerView: 2,
+                        spaceBetween: 30,
+                    },
+                    1024: {
+                        slidesPerView: 3,
+                        spaceBetween: 40,
+                    },
+                },
+                on: {
+                    init: function() {
+                        // Убеждаемся, что все слайды имеют одинаковую высоту
+                        this.updateAutoHeight();
+                        // Убеждаемся, что pagination видим
+                        const pagination = document.querySelector('.swiper-pagination');
+                        if (pagination) {
+                            pagination.style.display = 'flex';
+                            pagination.style.visibility = 'visible';
+                            pagination.style.opacity = '1';
+                        }
+                    },
+                    slideChange: function() {
+                        this.updateAutoHeight();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

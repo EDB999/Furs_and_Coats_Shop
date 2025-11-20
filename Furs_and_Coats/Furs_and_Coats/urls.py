@@ -23,6 +23,7 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('registration/', views.registration, name="registration"),
+    path('catalog/', views.catalog, name="catalog"),
     path('', views.index, name="index"),
 
     # Тестовые API endpoints

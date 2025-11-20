@@ -17,6 +17,11 @@ def registration(request):
     return render(request, "registration.html")
 
 
+def catalog(request):
+    products = Product.objects.all()
+    return render(request, "catalog.html", {"products": products})
+
+
 # Тестовые API endpoints для Swagger
 @api_view(['GET'])
 def api_overview(request):
