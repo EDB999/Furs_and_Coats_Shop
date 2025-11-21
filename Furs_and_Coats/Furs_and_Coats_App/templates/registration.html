@@ -8,6 +8,7 @@
     <link rel="StyleSheet" href="{% static 'css/registration.css'%}"/>
 </head>
 <body>
+
     <div class="auth-container">
         <div class="auth-card">
             <div class="auth-header">
@@ -15,16 +16,55 @@
                 <p>Заполните форму для регистрации</p>
             </div>
             
-            <form class="auth-form" method="POST" action="#">
+            <form class="auth-form" method="POST" action="{% url 'registration' %}">
+                {% csrf_token %}
+                {% if error_message %}
+                <div class="error-message" style="background: rgba(244, 67, 54, 0.1); color: #f44336; padding: 12px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(244, 67, 54, 0.3);">
+                    {{ error_message }}
+                </div>
+                {% endif %}
+                {% if success_message %}
+                <div class="success-message" style="background: rgba(76, 175, 80, 0.1); color: #4caf50; padding: 12px; border-radius: 8px; margin-bottom: 20px; border: 1px solid rgba(76, 175, 80, 0.3);">
+                    {{ success_message }}
+                </div>
+                {% endif %}
+                
                 <div class="form-group">
-                    <label for="full_name">ФИО</label>
+                    <label for="username">Имя пользователя</label>
                     <input 
                         type="text" 
-                        id="full_name" 
-                        name="full_name" 
-                        placeholder="Введите ваше полное имя"
+                        id="username" 
+                        name="username" 
+                        placeholder="Введите имя пользователя"
                         required
-                        autocomplete="name"
+                        autocomplete="username"
+                        value="{{ form_data.username|default:'' }}"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="first_name">Имя</label>
+                    <input 
+                        type="text" 
+                        id="first_name" 
+                        name="first_name" 
+                        placeholder="Введите ваше имя"
+                        required
+                        autocomplete="given-name"
+                        value="{{ form_data.first_name|default:'' }}"
+                    >
+                </div>
+                
+                <div class="form-group">
+                    <label for="last_name">Фамилия</label>
+                    <input 
+                        type="text" 
+                        id="last_name" 
+                        name="last_name" 
+                        placeholder="Введите вашу фамилию"
+                        required
+                        autocomplete="family-name"
+                        value="{{ form_data.last_name|default:'' }}"
                     >
                 </div>
                 
@@ -37,6 +77,7 @@
                         placeholder="Введите ваш email"
                         required
                         autocomplete="email"
+                        value="{{ form_data.email|default:'' }}"
                     >
                 </div>
                 
@@ -48,6 +89,7 @@
                         name="phone" 
                         placeholder="+7 (999) 123-45-67"
                         autocomplete="tel"
+                        value="{{ form_data.phone|default:'' }}"
                     >
                 </div>
                 

@@ -8,6 +8,28 @@
     <link rel="StyleSheet" href="{% static 'css/index.css'%}"/>
 </head>
 <body>
+    <header class="site-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="{% url 'index' %}">Furs and Coats</a>
+            </div>
+            <nav class="main-nav">
+                <a href="{% url 'index' %}" class="nav-link active">Главная</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'catalog' %}" class="nav-link">Каталог</a>
+                    <a href="{% url 'cart' %}" class="nav-link">Корзина</a>
+                    <a href="#" class="nav-link">Оплата</a>
+                    <a href="{% url 'logout' %}" class="nav-link">Выход</a>
+                {% else %}
+                    <a href="{% url 'catalog' %}" class="nav-link">Каталог</a>
+                    <a href="#" class="nav-link">Корзина</a>
+                    <a href="#" class="nav-link">Оплата</a>
+                    <a href="{% url 'registration' %}" class="nav-link">Регистрация</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
     <div class="auth-container">
         <div class="auth-card">
             <div class="auth-header">
@@ -15,7 +37,14 @@
                 <p>Войдите в свой аккаунт</p>
             </div>
             
-            <form class="auth-form" method="POST" action="#">
+            {% if error_message %}
+            <div class="error-message">
+                <p>{{ error_message }}</p>
+            </div>
+            {% endif %}
+            
+            <form class="auth-form" method="POST" action="{% url 'index' %}">
+                {% csrf_token %}
                 <div class="form-group">
                     <label for="email">Email или логин</label>
                     <input 
@@ -25,6 +54,7 @@
                         placeholder="Введите email или логин"
                         required
                         autocomplete="username"
+                        value="{% if login_identifier %}{{ login_identifier }}{% endif %}"
                     >
                 </div>
                 

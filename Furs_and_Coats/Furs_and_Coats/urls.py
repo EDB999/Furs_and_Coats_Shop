@@ -25,6 +25,9 @@ urlpatterns = [
     path('registration/', views.registration, name="registration"),
     path('catalog/', views.catalog, name="catalog"),
     path('', views.index, name="index"),
+    path('cart/', views.cart, name="cart"),
+    path('logout/', views.logout_view, name="logout"),
+
 
     # Тестовые API endpoints
     path('api/', views.api_overview, name='api-overview'),
