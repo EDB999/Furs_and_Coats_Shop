@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from decimal import Decimal
 
 from Furs_and_Coats_App.models import Product, Cart, CartItem
+from Furs_and_Coats_App.serializers import ProductSerializer
 from Furs_and_Coats_App.services.RegService import RegService
 from Furs_and_Coats_App.services.AuthService import AuthService
 
@@ -221,14 +222,14 @@ def remove_from_cart(request):
         cart_item_id = request.POST.get('cart_item_id')
         cart_item = get_object_or_404(CartItem, id=cart_item_id, cart__user=request.user)
         cart_item.delete()
-        
+
         # Пересчитываем общую стоимость
         cart = cart_item.cart
         cart_items = CartItem.objects.filter(cart=cart).select_related('product')
         total_amount = Decimal('0.00')
         for item in cart_items:
             total_amount += item.product.price * item.quantity
-        
+
         return JsonResponse({
             'success': True,
             'total_amount': str(total_amount)
@@ -243,7 +244,7 @@ def clear_cart(request):
     try:
         cart = get_object_or_404(Cart, user=request.user)
         CartItem.objects.filter(cart=cart).delete()
-        
+
         return JsonResponse({
             'success': True,
             'message': 'Корзина очищена'
@@ -255,6 +256,37 @@ def clear_cart(request):
 def logout_view(request):
     logout(request)
     return redirect('index')
+
+
+# API endpoins для задания
+
+
+@api_view(['GET'])
+def get_products_by_category(request):
+    """
+    Получение товаров по категории
+    GET /products?category=<category_id>
+    """
+    # Получаем ID категории из параметров запроса
+    category_id = request.GET.get('category')
+
+    if not category_id:
+        return Response(
+            {"error": "Не указан параметр category"},
+            status=400
+        )
+
+    # Фильтруем товары по категории
+    products = Product.objects.filter(category_id=category_id, in_stock=True)
+
+    # Сериализуем данные
+    serializer = ProductSerializer(products, many=True)
+
+    return Response({
+        "category_id": category_id,
+        "products_count": products.count(),
+        "products": serializer.data
+    })
 
 
 # Тестовые API endpoints для Swagger
