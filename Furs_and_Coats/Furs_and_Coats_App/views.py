@@ -8,8 +8,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from decimal import Decimal
 
-from Furs_and_Coats_App.models import Product, Cart, CartItem
-from Furs_and_Coats_App.serializers import ProductSerializer
+from Furs_and_Coats_App.models import Product, Cart, CartItem, Category
+from Furs_and_Coats_App.serializers import ProductFilteredListSerializer, ProductCardSerializer, CategorySerializer
 from Furs_and_Coats_App.services.RegService import RegService
 from Furs_and_Coats_App.services.AuthService import AuthService
 
@@ -217,7 +217,7 @@ def update_cart_item(request):
 
 @login_required(login_url='/')
 @require_POST
-def remove_from_cart(request):
+def delete_from_cart(request):
     try:
         cart_item_id = request.POST.get('cart_item_id')
         cart_item = get_object_or_404(CartItem, id=cart_item_id, cart__user=request.user)
@@ -261,32 +261,68 @@ def logout_view(request):
 # API endpoins для задания
 
 
+@api_view(["GET"])
+def get_products_by_filter(request):
+    try:
+        products = Product.objects.all()
+
+        category_id = request.GET.get('category')
+        if category_id:
+            products = products.filter(category_id=category_id)
+
+        min_price = request.GET.get('min_price')
+        if min_price:
+            products = products.filter(price__gte=min_price)
+
+        max_price = request.GET.get('max_price')
+        if max_price:
+            products = products.filter(price__lte=max_price)
+
+        sort = request.GET.get('sort')
+        if sort == 'price_asc':
+            products = products.order_by('price')
+        elif sort == 'price_desc':
+            products = products.order_by('-price')
+        else:
+            # Сортировка по умолчанию
+            products = products.order_by('id')
+
+        # Сериализация - ВАЖНО: убедитесь что этот код выполняется!
+        serializer = ProductFilteredListSerializer(products, many=True)
+
+        # ВАЖНО: убедитесь что есть return!
+        return Response({
+            "filters_applied": {
+                "category": category_id,
+                "min_price": min_price,
+                "max_price": max_price,
+                "sort": sort
+            },
+            "products_count": products.count(),
+            "products": serializer.data
+        })
+
+    except Exception as e:
+        # Если есть ошибка - возвращаем Response с ошибкой
+        return Response({"error": str(e)}, status=500)
+
+
 @api_view(['GET'])
-def get_products_by_category(request):
-    """
-    Получение товаров по категории
-    GET /products?category=<category_id>
-    """
-    # Получаем ID категории из параметров запроса
-    category_id = request.GET.get('category')
+def get_product_card(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
 
-    if not category_id:
-        return Response(
-            {"error": "Не указан параметр category"},
-            status=400
-        )
+    serializer = ProductCardSerializer(product)
 
-    # Фильтруем товары по категории
-    products = Product.objects.filter(category_id=category_id, in_stock=True)
+    return Response(serializer.data)
 
-    # Сериализуем данные
-    serializer = ProductSerializer(products, many=True)
 
-    return Response({
-        "category_id": category_id,
-        "products_count": products.count(),
-        "products": serializer.data
-    })
+@api_view(['GET'])
+def get_categories(request):
+    categories = Category.objects.all()
+
+    serializer = CategorySerializer(categories, many=True)
+
+    return Response(serializer.data)
 
 
 # Тестовые API endpoints для Swagger

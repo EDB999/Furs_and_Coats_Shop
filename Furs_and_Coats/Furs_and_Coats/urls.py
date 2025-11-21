@@ -32,11 +32,13 @@ urlpatterns = [
     path('cart/', views.cart, name="cart"),
     path('api/cart/add/', views.add_to_cart, name='add-to-cart'),
     path('api/cart/update/', views.update_cart_item, name='update-cart-item'),
-    path('api/cart/remove/', views.remove_from_cart, name='remove-from-cart'),
+    path('api/cart/remove/', views.delete_from_cart, name='remove-from-cart'),
     path('api/cart/clear/', views.clear_cart, name='clear-cart'),
 
     #API endpoints для задания
-    path("products/", views.get_products_by_category, name='get-products-by-category'),
+    path('products/', views.get_products_by_filter, name='product-list'),
+    path('products/<int:product_id>/', views.get_product_card, name='product-card'),
+    path('categories/', views.get_categories, name='categories'),
 
     # Тестовые API endpoints
     path('api/', views.api_overview, name='api-overview'),
