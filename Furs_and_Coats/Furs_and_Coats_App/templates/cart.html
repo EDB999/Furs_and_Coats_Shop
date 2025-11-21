@@ -1,10 +1,119 @@
 <!DOCTYPE html>
-<html lang="en">
+{% load static %}
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Корзина</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Корзина - Furs and Coats</title>
+    <link rel="stylesheet" href="{% static 'css/cart.css' %}">
+    <script>
+        window.cartUrls = {
+            updateCartItem: '{% url "update-cart-item" %}',
+            removeFromCart: '{% url "remove-from-cart" %}',
+            clearCart: '{% url "clear-cart" %}'
+        };
+    </script>
+    <script src="{% static 'JSS/cart.js' %}"></script>
 </head>
 <body>
+    <header class="site-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="{% url 'index' %}">Furs and Coats</a>
+            </div>
+            <nav class="main-nav">
+                <a href="{% url 'index' %}" class="nav-link">Главная</a>
+                <a href="{% url 'catalog' %}" class="nav-link">Каталог</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'cart' %}" class="nav-link active">Корзина</a>
+                    <a href="#" class="nav-link">Оплата</a>
+                    <a href="{% url 'logout' %}" class="nav-link">Выход</a>
+                {% else %}
+                    <a href="#" class="nav-link">Корзина</a>
+                    <a href="#" class="nav-link">Оплата</a>
+                    <a href="{% url 'registration' %}" class="nav-link">Регистрация</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
 
+    <div class="cart-container">
+        <div class="cart-header">
+            <h1>Корзина</h1>
+            <p>Ваши выбранные товары</p>
+        </div>
+
+        {% if cart_items %}
+        <div class="cart-items">
+            {% for item in cart_items %}
+            <div class="cart-item" data-cart-item-id="{{ item.id }}">
+                <div class="cart-item-image">
+                    <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="200" height="200" fill="#f0f0f0"/>
+                        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle"
+                              font-family="Arial" font-size="16" fill="#999">Нет изображения</text>
+                    </svg>
+                </div>
+                <div class="cart-item-info">
+                    <h3 class="cart-item-name">{{ item.product.name }}</h3>
+                    <p class="cart-item-description">{{ item.product.description|truncatewords:20 }}</p>
+                    <div class="cart-item-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Размер:</span>
+                            <span class="detail-value">{{ item.product.size }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Материал:</span>
+                            <span class="detail-value">{{ item.product.material }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Цвет:</span>
+                            <span class="detail-value">{{ item.product.color }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="cart-item-controls">
+                    <div class="quantity-controls">
+                        <button class="quantity-btn minus-btn" data-action="decrease">-</button>
+                        <span class="quantity-value">{{ item.quantity }}</span>
+                        <button class="quantity-btn plus-btn" data-action="increase">+</button>
+                    </div>
+                    <div class="cart-item-price">
+                        <span class="item-total-price" data-unit-price="{{ item.product.price }}" data-quantity="{{ item.quantity }}"></span>
+                        <span class="price-currency">₽</span>
+                    </div>
+                    <button class="remove-btn" data-action="remove">Удалить</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="cart-summary">
+            <div class="summary-content">
+                <div class="summary-row">
+                    <span class="summary-label">Итого:</span>
+                    <span class="summary-value">
+                        <span class="total-amount">{{ total_amount|floatformat:2 }}</span>
+                        <span class="price-currency">₽</span>
+                    </span>
+                </div>
+                <button class="clear-cart-btn">Очистить корзину</button>
+                <button class="checkout-btn">Оформить заказ</button>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-cart">
+            <div class="empty-cart-content">
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="empty-cart-icon">
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"/>
+                    <path d="M30 35 L70 35 M50 25 L50 65" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <h2>Корзина пуста</h2>
+                <p>Добавьте товары из каталога</p>
+                <a href="{% url 'catalog' %}" class="go-to-catalog-btn">Перейти в каталог</a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
 </body>
 </html>

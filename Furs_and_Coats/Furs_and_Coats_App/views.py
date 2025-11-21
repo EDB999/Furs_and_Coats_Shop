@@ -137,7 +137,119 @@ def catalog(request):
 
 @login_required(login_url='/')
 def cart(request):
-    return render(request, "cart.html")
+    cart, created = Cart.objects.get_or_create(user=request.user)
+    cart_items = CartItem.objects.filter(cart=cart).select_related('product')
+
+    total_amount = Decimal('0.00')
+    for item in cart_items:
+        total_amount += item.product.price * item.quantity
+
+    context = {
+        'cart_items': cart_items,
+        'total_amount': total_amount,
+    }
+    return render(request, "cart.html", context)
+
+
+@login_required(login_url='/')
+@require_POST
+def add_to_cart(request):
+    try:
+        product_id = request.POST.get('product_id')
+        if not product_id:
+            return JsonResponse({'success': False, 'error': 'Product ID is required'}, status=400)
+
+        product = get_object_or_404(Product, id=product_id)
+        cart, created = Cart.objects.get_or_create(user=request.user)
+
+        cart_item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            product=product,
+            defaults={'quantity': 1}
+        )
+
+        if not created:
+            cart_item.quantity += 1
+            cart_item.save()
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Товар добавлен в корзину',
+            'quantity': cart_item.quantity
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required(login_url='/')
+@require_POST
+def update_cart_item(request):
+    try:
+        cart_item_id = request.POST.get('cart_item_id')
+        quantity = int(request.POST.get('quantity', 1))
+
+        if quantity < 1:
+            return JsonResponse({'success': False, 'error': 'Quantity must be at least 1'}, status=400)
+
+        cart_item = get_object_or_404(CartItem, id=cart_item_id, cart__user=request.user)
+        cart_item.quantity = quantity
+        cart_item.save()
+
+        # Пересчитываем общую стоимость
+        cart = cart_item.cart
+        cart_items = CartItem.objects.filter(cart=cart).select_related('product')
+        total_amount = Decimal('0.00')
+        for item in cart_items:
+            total_amount += item.product.price * item.quantity
+
+        item_total = cart_item.product.price * cart_item.quantity
+
+        return JsonResponse({
+            'success': True,
+            'quantity': cart_item.quantity,
+            'item_total': str(item_total),
+            'total_amount': str(total_amount)
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required(login_url='/')
+@require_POST
+def remove_from_cart(request):
+    try:
+        cart_item_id = request.POST.get('cart_item_id')
+        cart_item = get_object_or_404(CartItem, id=cart_item_id, cart__user=request.user)
+        cart_item.delete()
+        
+        # Пересчитываем общую стоимость
+        cart = cart_item.cart
+        cart_items = CartItem.objects.filter(cart=cart).select_related('product')
+        total_amount = Decimal('0.00')
+        for item in cart_items:
+            total_amount += item.product.price * item.quantity
+        
+        return JsonResponse({
+            'success': True,
+            'total_amount': str(total_amount)
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required(login_url='/')
+@require_POST
+def clear_cart(request):
+    try:
+        cart = get_object_or_404(Cart, user=request.user)
+        CartItem.objects.filter(cart=cart).delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Корзина очищена'
+        })
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 def logout_view(request):

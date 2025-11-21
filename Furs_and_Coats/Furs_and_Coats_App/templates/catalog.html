@@ -17,9 +17,8 @@
             <nav class="main-nav">
                 <a href="{% url 'index' %}" class="nav-link">Главная</a>
                 <a href="{% url 'catalog' %}" class="nav-link active">Каталог</a>
-                <a href="#" class="nav-link">Корзина</a>
+                <a href="{% url 'cart' %}" class="nav-link">Корзина</a>
                 <a href="#" class="nav-link">Оплата</a>
-                <a href="{% url 'registration' %}" class="nav-link">Регистрация</a>
             </nav>
         </div>
     </header>
@@ -75,7 +74,7 @@
                                             {% endif %}
                                         </div>
                                     </div>
-                                    <button class="product-btn">В корзину</button>
+                                    <button class="product-btn" data-product-id="{{ product.id }}">В корзину</button>
                                 </div>
                             </div>
                         </div>
@@ -93,63 +92,10 @@
 
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const paginationEl = document.querySelector('.swiper-pagination');
-            if (!paginationEl) {
-                console.error('Pagination element not found!');
-            }
-
-            const swiper = new Swiper('.catalog-swiper', {
-                slidesPerView: 1,
-                spaceBetween: 30,
-                loop: true,
-                autoplay: {
-                    delay: 3000,
-                    disableOnInteraction: false,
-                },
-                pagination: {
-                    el: '.swiper-pagination',
-                    clickable: true,
-                    renderBullet: function (index, className) {
-                        return '<span class="' + className + '"></span>';
-                    },
-                },
-                navigation: {
-                    nextEl: '.swiper-button-next',
-                    prevEl: '.swiper-button-prev',
-                },
-                breakpoints: {
-                    640: {
-                        slidesPerView: 2,
-                        spaceBetween: 20,
-                    },
-                    768: {
-                        slidesPerView: 2,
-                        spaceBetween: 30,
-                    },
-                    1024: {
-                        slidesPerView: 3,
-                        spaceBetween: 40,
-                    },
-                },
-                on: {
-                    init: function() {
-                        // Убеждаемся, что все слайды имеют одинаковую высоту
-                        this.updateAutoHeight();
-                        // Убеждаемся, что pagination видим
-                        const pagination = document.querySelector('.swiper-pagination');
-                        if (pagination) {
-                            pagination.style.display = 'flex';
-                            pagination.style.visibility = 'visible';
-                            pagination.style.opacity = '1';
-                        }
-                    },
-                    slideChange: function() {
-                        this.updateAutoHeight();
-                    }
-                }
-            });
-        });
+        window.catalogUrls = {
+            addToCart: '{% url "add-to-cart" %}'
+        };
     </script>
+    <script src="{% static 'JSS/catalog.js' %}"></script>
 </body>
 </html>

@@ -8,6 +8,19 @@
     <link rel="StyleSheet" href="{% static 'css/registration.css'%}"/>
 </head>
 <body>
+    <header class="site-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="{% url 'index' %}">Furs and Coats</a>
+            </div>
+            <nav class="main-nav">
+                <a href="{% url 'index' %}" class="nav-link">Главная</a>
+                <a href="{% url 'catalog' %}" class="nav-link active">Каталог</a>
+                <a href="{% url 'cart' %}" class="nav-link">Корзина</a>
+                <a href="#" class="nav-link">Оплата</a>
+            </nav>
+        </div>
+    </header>
 
     <div class="auth-container">
         <div class="auth-card">

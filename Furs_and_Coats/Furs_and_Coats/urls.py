@@ -25,9 +25,13 @@ urlpatterns = [
     path('registration/', views.registration, name="registration"),
     path('catalog/', views.catalog, name="catalog"),
     path('', views.index, name="index"),
-    path('cart/', views.cart, name="cart"),
     path('logout/', views.logout_view, name="logout"),
 
+    path('cart/', views.cart, name="cart"),
+    path('api/cart/add/', views.add_to_cart, name='add-to-cart'),
+    path('api/cart/update/', views.update_cart_item, name='update-cart-item'),
+    path('api/cart/remove/', views.remove_from_cart, name='remove-from-cart'),
+    path('api/cart/clear/', views.clear_cart, name='clear-cart'),
 
     # Тестовые API endpoints
     path('api/', views.api_overview, name='api-overview'),
