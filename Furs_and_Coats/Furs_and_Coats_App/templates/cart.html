@@ -6,13 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Корзина - Furs and Coats</title>
     <link rel="stylesheet" href="{% static 'css/cart.css' %}">
-    <script>
-        window.cartUrls = {
-            updateCartItem: '{% url "update-cart-item" %}',
-            removeFromCart: '{% url "remove-from-cart" %}',
-            clearCart: '{% url "clear-cart" %}'
-        };
-    </script>
+        <script>
+            window.cartUrls = {
+                updateCartItem: '{% url "update-cart-item" 0 %}'.replace('0', ''),
+                removeFromCart: '{% url "delete-from-cart" 0 %}'.replace('0', ''),
+                clearCart: '{% url "clear-cart" %}',
+                getCart: '{% url "get-cart" %}'
+             };
+        window.csrfToken = '{{ csrf_token }}';
+        </script>
     <script src="{% static 'JSS/cart.js' %}"></script>
 </head>
 <body>

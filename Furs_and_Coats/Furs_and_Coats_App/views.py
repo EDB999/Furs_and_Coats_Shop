@@ -4,12 +4,15 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from decimal import Decimal
 
 from Furs_and_Coats_App.models import Product, Cart, CartItem, Category
-from Furs_and_Coats_App.serializers import ProductFilteredListSerializer, ProductCardSerializer, CategorySerializer
+from Furs_and_Coats_App.serializers import ProductFilteredListSerializer, ProductCardSerializer, CategorySerializer, \
+    CartSerializer, UpdateCartItemSerializer, AddToCartSerializer
+from Furs_and_Coats_App.services.CartService import CartService
 from Furs_and_Coats_App.services.RegService import RegService
 from Furs_and_Coats_App.services.AuthService import AuthService
 
@@ -138,119 +141,228 @@ def catalog(request):
 
 @login_required(login_url='/')
 def cart(request):
-    cart, created = Cart.objects.get_or_create(user=request.user)
-    cart_items = CartItem.objects.filter(cart=cart).select_related('product')
-
-    total_amount = Decimal('0.00')
-    for item in cart_items:
-        total_amount += item.product.price * item.quantity
+    cart_data = CartService.get_cart_with_items(request.user)
 
     context = {
-        'cart_items': cart_items,
-        'total_amount': total_amount,
+        'cart_items': cart_data['cart_items'],
+        'total_amount': cart_data['total_amount'],
     }
     return render(request, "cart.html", context)
 
 
-@login_required(login_url='/')
-@require_POST
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_cart(request):
+    """Получить корзину пользователя"""
+    try:
+        cart_data = CartService.get_cart_with_items(request.user)
+        serializer = CartSerializer(cart_data['cart'])
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def add_to_cart(request):
+    """Добавить товар в корзину"""
     try:
-        product_id = request.POST.get('product_id')
-        if not product_id:
-            return JsonResponse({'success': False, 'error': 'Product ID is required'}, status=400)
+        serializer = AddToCartSerializer(data=request.data)
+        if serializer.is_valid():
+            product_id = serializer.validated_data['product_id']
+            cart_item = CartService.add_to_cart(request.user, product_id)
 
-        product = get_object_or_404(Product, id=product_id)
-        cart, created = Cart.objects.get_or_create(user=request.user)
+            # Получаем обновленные данные корзины
+            cart_data = CartService.get_cart_with_items(request.user)
+            cart_serializer = CartSerializer(cart_data['cart'])
 
-        cart_item, created = CartItem.objects.get_or_create(
-            cart=cart,
-            product=product,
-            defaults={'quantity': 1}
-        )
+            return Response({
+                "success": True,
+                "message": "Товар добавлен в корзину",
+                "quantity": cart_item.quantity,
+                "cart": cart_serializer.data
+            })
+        else:
+            return Response({"success": False, "error": serializer.errors}, status=400)
 
-        if not created:
-            cart_item.quantity += 1
-            cart_item.save()
-
-        return JsonResponse({
-            'success': True,
-            'message': 'Товар добавлен в корзину',
-            'quantity': cart_item.quantity
-        })
+    except Product.DoesNotExist:
+        return Response({"success": False, "error": "Product not found"}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return Response({"success": False, "error": str(e)}, status=500)
 
 
-@login_required(login_url='/')
-@require_POST
-def update_cart_item(request):
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def update_cart_item(request, cart_item_id):
+    """Обновить количество товара в корзине"""
     try:
-        cart_item_id = request.POST.get('cart_item_id')
-        quantity = int(request.POST.get('quantity', 1))
+        serializer = UpdateCartItemSerializer(data=request.data)
+        if serializer.is_valid():
+            quantity = serializer.validated_data['quantity']
+            cart_item = CartService.update_cart_item(request.user, cart_item_id, quantity)
 
-        if quantity < 1:
-            return JsonResponse({'success': False, 'error': 'Quantity must be at least 1'}, status=400)
+            # Получаем обновленные данные корзины
+            cart_data = CartService.get_cart_with_items(request.user)
+            cart_serializer = CartSerializer(cart_data['cart'])
 
-        cart_item = get_object_or_404(CartItem, id=cart_item_id, cart__user=request.user)
-        cart_item.quantity = quantity
-        cart_item.save()
+            item_total = cart_item.product.price * cart_item.quantity
 
-        # Пересчитываем общую стоимость
-        cart = cart_item.cart
-        cart_items = CartItem.objects.filter(cart=cart).select_related('product')
-        total_amount = Decimal('0.00')
-        for item in cart_items:
-            total_amount += item.product.price * item.quantity
+            return Response({
+                "success": True,
+                "quantity": cart_item.quantity,
+                "item_total": str(item_total),
+                "total_amount": str(cart_data['total_amount']),
+                "cart": cart_serializer.data
+            })
+        else:
+            return Response({"success": False, "error": serializer.errors}, status=400)
 
-        item_total = cart_item.product.price * cart_item.quantity
-
-        return JsonResponse({
-            'success': True,
-            'quantity': cart_item.quantity,
-            'item_total': str(item_total),
-            'total_amount': str(total_amount)
-        })
+    except ValueError as e:
+        return Response({"success": False, "error": str(e)}, status=400)
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return Response({"success": False, "error": str(e)}, status=500)
 
 
-@login_required(login_url='/')
-@require_POST
-def delete_from_cart(request):
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_from_cart(request, cart_item_id):
+    """Удалить товар из корзины"""
     try:
-        cart_item_id = request.POST.get('cart_item_id')
-        cart_item = get_object_or_404(CartItem, id=cart_item_id, cart__user=request.user)
-        cart_item.delete()
+        cart_item = CartService.delete_from_cart(request.user, cart_item_id)
 
-        # Пересчитываем общую стоимость
-        cart = cart_item.cart
-        cart_items = CartItem.objects.filter(cart=cart).select_related('product')
-        total_amount = Decimal('0.00')
-        for item in cart_items:
-            total_amount += item.product.price * item.quantity
+        # Получаем обновленные данные корзины
+        cart_data = CartService.get_cart_with_items(request.user)
+        cart_serializer = CartSerializer(cart_data['cart'])
 
-        return JsonResponse({
-            'success': True,
-            'total_amount': str(total_amount)
+        return Response({
+            "success": True,
+            "total_amount": str(cart_data['total_amount']),
+            "cart": cart_serializer.data
         })
+
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return Response({"success": False, "error": str(e)}, status=500)
 
 
-@login_required(login_url='/')
-@require_POST
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
 def clear_cart(request):
+    """Очистить корзину"""
     try:
-        cart = get_object_or_404(Cart, user=request.user)
-        CartItem.objects.filter(cart=cart).delete()
+        CartService.clear_cart(request.user)
 
-        return JsonResponse({
-            'success': True,
-            'message': 'Корзина очищена'
+        # Получаем обновленные данные корзины
+        cart_data = CartService.get_cart_with_items(request.user)
+        cart_serializer = CartSerializer(cart_data['cart'])
+
+        return Response({
+            "success": True,
+            "message": "Корзина очищена",
+            "cart": cart_serializer.data
         })
+
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+        return Response({"success": False, "error": str(e)}, status=500)
+
+# @login_required(login_url='/')
+# @require_POST
+# def add_to_cart(request):
+#     try:
+#         product_id = request.POST.get('product_id')
+#         if not product_id:
+#             return JsonResponse({'success': False, 'error': 'Product ID is required'}, status=400)
+#
+#         product = get_object_or_404(Product, id=product_id)
+#         cart, created = Cart.objects.get_or_create(user=request.user)
+#
+#         cart_item, created = CartItem.objects.get_or_create(
+#             cart=cart,
+#             product=product,
+#             defaults={'quantity': 1}
+#         )
+#
+#         if not created:
+#             cart_item.quantity += 1
+#             cart_item.save()
+#
+#         return JsonResponse({
+#             'success': True,
+#             'message': 'Товар добавлен в корзину',
+#             'quantity': cart_item.quantity
+#         })
+#     except Exception as e:
+#         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+#
+#
+# @login_required(login_url='/')
+# @require_POST
+# def update_cart_item(request):
+#     try:
+#         cart_item_id = request.POST.get('cart_item_id')
+#         quantity = int(request.POST.get('quantity', 1))
+#
+#         if quantity < 1:
+#             return JsonResponse({'success': False, 'error': 'Quantity must be at least 1'}, status=400)
+#
+#         cart_item = get_object_or_404(CartItem, id=cart_item_id, cart__user=request.user)
+#         cart_item.quantity = quantity
+#         cart_item.save()
+#
+#         # Пересчитываем общую стоимость
+#         cart = cart_item.cart
+#         cart_items = CartItem.objects.filter(cart=cart).select_related('product')
+#         total_amount = Decimal('0.00')
+#         for item in cart_items:
+#             total_amount += item.product.price * item.quantity
+#
+#         item_total = cart_item.product.price * cart_item.quantity
+#
+#         return JsonResponse({
+#             'success': True,
+#             'quantity': cart_item.quantity,
+#             'item_total': str(item_total),
+#             'total_amount': str(total_amount)
+#         })
+#     except Exception as e:
+#         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+#
+#
+# @login_required(login_url='/')
+# @require_POST
+# def delete_from_cart(request):
+#     try:
+#         cart_item_id = request.POST.get('cart_item_id')
+#         cart_item = get_object_or_404(CartItem, id=cart_item_id, cart__user=request.user)
+#         cart_item.delete()
+#
+#         # Пересчитываем общую стоимость
+#         cart = cart_item.cart
+#         cart_items = CartItem.objects.filter(cart=cart).select_related('product')
+#         total_amount = Decimal('0.00')
+#         for item in cart_items:
+#             total_amount += item.product.price * item.quantity
+#
+#         return JsonResponse({
+#             'success': True,
+#             'total_amount': str(total_amount)
+#         })
+#     except Exception as e:
+#         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+#
+#
+# @login_required(login_url='/')
+# @require_POST
+# def clear_cart(request):
+#     try:
+#         cart = get_object_or_404(Cart, user=request.user)
+#         CartItem.objects.filter(cart=cart).delete()
+#
+#         return JsonResponse({
+#             'success': True,
+#             'message': 'Корзина очищена'
+#         })
+#     except Exception as e:
+#         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 def logout_view(request):

@@ -30,9 +30,10 @@ urlpatterns = [
 
     #Cart and API endpoints
     path('cart/', views.cart, name="cart"),
+    path('api/cart/', views.get_cart, name='get-cart'),
     path('api/cart/add/', views.add_to_cart, name='add-to-cart'),
-    path('api/cart/update/', views.update_cart_item, name='update-cart-item'),
-    path('api/cart/remove/', views.delete_from_cart, name='remove-from-cart'),
+    path('api/cart/items/<int:cart_item_id>/update/', views.update_cart_item, name='update-cart-item'),
+    path('api/cart/items/<int:cart_item_id>/delete/', views.delete_from_cart, name='delete-from-cart'),
     path('api/cart/clear/', views.clear_cart, name='clear-cart'),
 
     #API endpoints для задания
