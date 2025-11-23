@@ -21,17 +21,12 @@ from Furs_and_Coats_App.services.RegService import RegService
 from Furs_and_Coats_App.services.AuthService import AuthService
 
 
-# Create your views here.
-
-
 def index(request):
     if request.method == 'POST':
-        # Получение данных из формы
         login_identifier = request.POST.get('email', '').strip()
         password = request.POST.get('password', '')
         remember_me = request.POST.get('remember', False)
 
-        # Валидация данных
         validation_errors = AuthService.validate_login_data(login_identifier, password)
 
         if validation_errors:
@@ -40,20 +35,16 @@ def index(request):
                 'login_identifier': login_identifier
             })
 
-        # Попытка аутентификации
         try:
             user, profile = AuthService.authenticate_user(login_identifier, password)
 
-            # Вход пользователя
             login(request, user)
 
-            # Если выбрано "Запомнить меня", устанавливаем длинную сессию
             if remember_me:
-                request.session.set_expiry(1209600)  # 2 недели
+                request.session.set_expiry(1209600)
             else:
-                request.session.set_expiry(0)  # Сессия до закрытия браузера
+                request.session.set_expiry(0)
 
-            # Успешная аутентификация - перенаправляем в каталог
             return redirect('catalog')
 
         except ValidationError as e:
@@ -72,7 +63,6 @@ def index(request):
 
 def registration(request):
     if request.method == 'POST':
-        # Получение данных из формы
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip()
         password = request.POST.get('password', '')
@@ -81,7 +71,6 @@ def registration(request):
         last_name = request.POST.get('last_name', '').strip()
         phone = request.POST.get('phone', '').strip()
 
-        # Сохранение данных формы для повторного отображения при ошибке
         form_data = {
             'username': username,
             'email': email,
@@ -90,7 +79,6 @@ def registration(request):
             'phone': phone,
         }
 
-        # Валидация данных
         validation_errors = RegService.validate_registration_data(
             username, email, password, confirm_password, first_name, last_name
         )
@@ -101,7 +89,6 @@ def registration(request):
                 'form_data': form_data
             })
 
-        # Попытка регистрации
         try:
             user, profile = RegService.register_user(
                 username=username,
@@ -112,7 +99,6 @@ def registration(request):
                 phone=phone
             )
 
-            # Успешная регистрация
             return render(request, "registration.html", {
                 'success_message': f'Регистрация успешна! Добро пожаловать, {user.first_name}!'
             })
@@ -128,7 +114,6 @@ def registration(request):
                 'form_data': form_data
             })
 
-    # GET запрос - отображение формы
     return render(request, "registration.html")
 
 
@@ -140,7 +125,6 @@ def catalog(request):
 
 @login_required(login_url='/')
 def cart(request):
-    """HTML страница корзины (для обратной совместимости)"""
     cart_data = CartService.get_cart_with_items(request.user)
 
     context = {
@@ -153,7 +137,6 @@ def cart(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_cart(request):
-    """Получить корзину пользователя"""
     try:
         cart_data = CartService.get_cart_with_items(request.user)
         serializer = CartSerializer(cart_data['cart'])
@@ -165,14 +148,12 @@ def get_cart(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def add_to_cart(request):
-    """Добавить товар в корзину"""
     try:
         serializer = AddToCartSerializer(data=request.data)
         if serializer.is_valid():
             product_id = serializer.validated_data['product_id']
             cart_item = CartService.add_to_cart(request.user, product_id)
 
-            # Получаем обновленные данные корзины
             cart_data = CartService.get_cart_with_items(request.user)
             cart_serializer = CartSerializer(cart_data['cart'])
 
@@ -194,14 +175,12 @@ def add_to_cart(request):
 @api_view(['PUT'])
 @permission_classes([IsAuthenticated])
 def update_cart_item(request, cart_item_id):
-    """Обновить количество товара в корзине"""
     try:
         serializer = UpdateCartItemSerializer(data=request.data)
         if serializer.is_valid():
             quantity = serializer.validated_data['quantity']
             cart_item = CartService.update_cart_item(request.user, cart_item_id, quantity)
 
-            # Получаем обновленные данные корзины
             cart_data = CartService.get_cart_with_items(request.user)
             cart_serializer = CartSerializer(cart_data['cart'])
 
@@ -226,11 +205,9 @@ def update_cart_item(request, cart_item_id):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def delete_from_cart(request, cart_item_id):
-    """Удалить товар из корзины"""
     try:
         cart_item = CartService.delete_from_cart(request.user, cart_item_id)
 
-        # Получаем обновленные данные корзины
         cart_data = CartService.get_cart_with_items(request.user)
         cart_serializer = CartSerializer(cart_data['cart'])
 
@@ -247,11 +224,9 @@ def delete_from_cart(request, cart_item_id):
 @api_view(['DELETE'])
 @permission_classes([IsAuthenticated])
 def clear_cart(request):
-    """Очистить корзину"""
     try:
         CartService.clear_cart(request.user)
 
-        # Получаем обновленные данные корзины
         cart_data = CartService.get_cart_with_items(request.user)
         cart_serializer = CartSerializer(cart_data['cart'])
 
@@ -265,7 +240,6 @@ def clear_cart(request):
         return Response({"success": False, "error": str(e)}, status=500)
 
 
-# Единый REST API эндпоинт для корзины /cart
 @swagger_auto_schema(
     method='get',
     operation_description="Получить корзину текущего пользователя в формате JSON. Пользователь может получить только свою корзину.",
@@ -337,8 +311,8 @@ def clear_cart(request):
 @swagger_auto_schema(
     method='delete',
     operation_description="Удалить товар из корзины или очистить корзину полностью. "
-                        "Если указан cart_item_id - удаляется конкретный товар, "
-                        "если cart_item_id не указан - очищается вся корзина.",
+                          "Если указан cart_item_id - удаляется конкретный товар, "
+                          "если cart_item_id не указан - очищается вся корзина.",
     request_body=DeleteCartItemSerializer,
     responses={
         200: openapi.Response(
@@ -360,29 +334,18 @@ def clear_cart(request):
 @api_view(['GET', 'POST', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def cart_api(request):
-    """
-    Единый REST API эндпоинт для работы с корзиной.
-    
-    GET - получить корзину пользователя (JSON)
-    POST - добавить товар в корзину
-    PUT - обновить количество товара в корзине
-    DELETE - удалить товар из корзины или очистить корзину
-    """
     try:
         if request.method == 'GET':
-            # GET /cart - получить корзину пользователя (API)
             cart_data = CartService.get_cart_with_items(request.user)
             serializer = CartSerializer(cart_data['cart'])
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         elif request.method == 'POST':
-            # POST /cart - добавить товар в корзину
             serializer = AddToCartSerializer(data=request.data)
             if serializer.is_valid():
                 product_id = serializer.validated_data['product_id']
                 cart_item = CartService.add_to_cart(request.user, product_id)
 
-                # Получаем обновленные данные корзины
                 cart_data = CartService.get_cart_with_items(request.user)
                 cart_serializer = CartSerializer(cart_data['cart'])
 
@@ -399,7 +362,6 @@ def cart_api(request):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
         elif request.method == 'PUT':
-            # PUT /cart - обновить количество товара в корзине
             cart_item_id = request.data.get('cart_item_id')
             quantity = request.data.get('quantity')
 
@@ -414,7 +376,6 @@ def cart_api(request):
                 quantity = serializer.validated_data['quantity']
                 cart_item = CartService.update_cart_item(request.user, cart_item_id, quantity)
 
-                # Получаем обновленные данные корзины
                 cart_data = CartService.get_cart_with_items(request.user)
                 cart_serializer = CartSerializer(cart_data['cart'])
 
@@ -434,14 +395,11 @@ def cart_api(request):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
         elif request.method == 'DELETE':
-            # DELETE /cart - удалить товар из корзины или очистить корзину
             cart_item_id = request.data.get('cart_item_id')
 
             if cart_item_id:
-                # Удалить конкретный товар из корзины
                 cart_item = CartService.delete_from_cart(request.user, cart_item_id)
 
-                # Получаем обновленные данные корзины
                 cart_data = CartService.get_cart_with_items(request.user)
                 cart_serializer = CartSerializer(cart_data['cart'])
 
@@ -452,10 +410,8 @@ def cart_api(request):
                     "cart": cart_serializer.data
                 }, status=status.HTTP_200_OK)
             else:
-                # Очистить всю корзину
                 CartService.clear_cart(request.user)
 
-                # Получаем обновленные данные корзины
                 cart_data = CartService.get_cart_with_items(request.user)
                 cart_serializer = CartSerializer(cart_data['cart'])
 
@@ -481,17 +437,17 @@ def cart_api(request):
             "error": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
 def logout_view(request):
     logout(request)
     return redirect('index')
 
 
-# Эндпоинт для создания заказа
 @swagger_auto_schema(
     method='post',
     operation_description="Создать заказ из товаров в корзине пользователя. "
-                        "После успешного создания заказа корзина будет автоматически очищена. "
-                        "Тело запроса может быть пустым - заказ создается из текущей корзины.",
+                          "После успешного создания заказа корзина будет автоматически очищена. "
+                          "Тело запроса может быть пустым - заказ создается из текущей корзины.",
     request_body=CreateOrderSerializer,
     responses={
         201: openapi.Response(
@@ -529,46 +485,35 @@ def logout_view(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_order(request):
-    """
-    Создать заказ из товаров в корзине пользователя.
-    
-    После успешного создания заказа корзина автоматически очищается.
-    """
     try:
-        # Получаем корзину пользователя
         cart_data = CartService.get_cart_with_items(request.user)
         cart_items = cart_data['cart_items']
         total_amount = cart_data['total_amount']
 
-        # Проверяем, что корзина не пуста
         if not cart_items.exists():
             return Response({
                 "success": False,
                 "error": "Корзина пуста. Невозможно создать заказ из пустой корзины."
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Создаем заказ
         order = Order.objects.create(
             user=request.user,
             status='pending',
             total_amount=total_amount
         )
 
-        # Создаем OrderItem для каждого товара в корзине
         order_items = []
         for cart_item in cart_items:
             order_item = OrderItem.objects.create(
                 order=order,
                 product=cart_item.product,
                 quantity=cart_item.quantity,
-                price=cart_item.product.price  # Сохраняем цену на момент покупки
+                price=cart_item.product.price
             )
             order_items.append(order_item)
 
-        # Очищаем корзину после создания заказа
         CartService.clear_cart(request.user)
 
-        # Сериализуем заказ для ответа
         serializer = OrderSerializer(order)
 
         return Response({
@@ -582,9 +527,6 @@ def create_order(request):
             "success": False,
             "error": str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-# API endpoins для задания
 
 
 @api_view(["GET"])
@@ -610,13 +552,10 @@ def get_products_by_filter(request):
         elif sort == 'price_desc':
             products = products.order_by('-price')
         else:
-            # Сортировка по умолчанию
             products = products.order_by('id')
 
-        # Сериализация - ВАЖНО: убедитесь что этот код выполняется!
         serializer = ProductFilteredListSerializer(products, many=True)
 
-        # ВАЖНО: убедитесь что есть return!
         return Response({
             "filters_applied": {
                 "category": category_id,
@@ -629,7 +568,6 @@ def get_products_by_filter(request):
         })
 
     except Exception as e:
-        # Если есть ошибка - возвращаем Response с ошибкой
         return Response({"error": str(e)}, status=500)
 
 
@@ -651,12 +589,8 @@ def get_categories(request):
     return Response(serializer.data)
 
 
-# Тестовые API endpoints для Swagger
 @api_view(['GET'])
 def api_overview(request):
-    """
-    Обзор доступных API endpoints
-    """
     api_urls = {
         'message': 'Добро пожаловать в Furs and Coats API!',
         'endpoints': {
@@ -670,9 +604,6 @@ def api_overview(request):
 
 @api_view(['GET'])
 def user_info(request):
-    """
-    Получить информацию о пользователе
-    """
     return Response({
         "user": {
             "id": 1,

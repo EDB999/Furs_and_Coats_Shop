@@ -21,8 +21,6 @@ class Product(models.Model):
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone = models.CharField(max_length=20, blank=True)
-    # birth_date = models.DateField(null=True, blank=True)
-    # avatar = models.ImageField(upload_to='avatars/', blank=True)
 
 
 class Address(models.Model):
@@ -50,7 +48,7 @@ class OrderItem(models.Model):
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
-    price = models.DecimalField(max_digits=10, decimal_places=2)  # цена на момент покупки
+    price = models.DecimalField(max_digits=10, decimal_places=2)
 
 
 class Cart(models.Model):
@@ -62,8 +60,6 @@ class CartItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
 
-
-# Для интеграций
 class Payment(models.Model):
     order = models.OneToOneField(Order, on_delete=models.CASCADE)
     payment_method = models.CharField(max_length=50)

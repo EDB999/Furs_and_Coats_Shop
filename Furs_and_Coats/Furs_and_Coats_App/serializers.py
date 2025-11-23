@@ -72,7 +72,7 @@ class UpdateCartItemSerializer(serializers.Serializer):
 
 
 class DeleteCartItemSerializer(serializers.Serializer):
-    cart_item_id = serializers.IntegerField(required=False, help_text="ID товара в корзине. Если не указан, корзина будет очищена полностью.")
+    cart_item_id = serializers.IntegerField(required=False)
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -94,5 +94,4 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class CreateOrderSerializer(serializers.Serializer):
-    """Serializer для создания заказа. Тело запроса может быть пустым - заказ создается из корзины пользователя."""
     pass
