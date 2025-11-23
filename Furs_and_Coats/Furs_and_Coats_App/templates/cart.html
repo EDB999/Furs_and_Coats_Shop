@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 {% load static %}
 <html lang="ru">
 <head>
@@ -8,8 +8,9 @@
     <link rel="stylesheet" href="{% static 'css/cart.css' %}">
         <script>
             window.cartUrls = {
-                updateCartItem: '{% url "update-cart-item" 0 %}'.replace('0', ''),
-                removeFromCart: '{% url "delete-from-cart" 0 %}'.replace('0', ''),
+                // Формируем базовые URL для замены ID
+                updateCartItem: '{% url "update-cart-item" 999 %}'.replace('999', ''),
+                removeFromCart: '{% url "delete-from-cart" 999 %}'.replace('999', ''),
                 clearCart: '{% url "clear-cart" %}',
                 getCart: '{% url "get-cart" %}'
              };

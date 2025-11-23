@@ -7,11 +7,15 @@ from django.views.decorators.http import require_POST
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework import status
 from decimal import Decimal
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
-from Furs_and_Coats_App.models import Product, Cart, CartItem, Category
+from Furs_and_Coats_App.models import Product, Cart, CartItem, Category, Order, OrderItem
 from Furs_and_Coats_App.serializers import ProductFilteredListSerializer, ProductCardSerializer, CategorySerializer, \
-    CartSerializer, UpdateCartItemSerializer, AddToCartSerializer
+    CartSerializer, UpdateCartItemSerializer, AddToCartSerializer, DeleteCartItemSerializer, \
+    OrderSerializer, CreateOrderSerializer
 from Furs_and_Coats_App.services.CartService import CartService
 from Furs_and_Coats_App.services.RegService import RegService
 from Furs_and_Coats_App.services.AuthService import AuthService
@@ -21,10 +25,6 @@ from Furs_and_Coats_App.services.AuthService import AuthService
 
 
 def index(request):
-    # Если пользователь уже аутентифицирован, перенаправляем в каталог
-    # if request.user.is_authenticated:
-    #     return redirect('index.html')
-
     if request.method == 'POST':
         # Получение данных из формы
         login_identifier = request.POST.get('email', '').strip()
@@ -67,7 +67,6 @@ def index(request):
                 'login_identifier': login_identifier
             })
 
-    # GET запрос - отображение формы
     return render(request, "index.html")
 
 
@@ -141,6 +140,7 @@ def catalog(request):
 
 @login_required(login_url='/')
 def cart(request):
+    """HTML страница корзины (для обратной совместимости)"""
     cart_data = CartService.get_cart_with_items(request.user)
 
     context = {
@@ -264,110 +264,324 @@ def clear_cart(request):
     except Exception as e:
         return Response({"success": False, "error": str(e)}, status=500)
 
-# @login_required(login_url='/')
-# @require_POST
-# def add_to_cart(request):
-#     try:
-#         product_id = request.POST.get('product_id')
-#         if not product_id:
-#             return JsonResponse({'success': False, 'error': 'Product ID is required'}, status=400)
-#
-#         product = get_object_or_404(Product, id=product_id)
-#         cart, created = Cart.objects.get_or_create(user=request.user)
-#
-#         cart_item, created = CartItem.objects.get_or_create(
-#             cart=cart,
-#             product=product,
-#             defaults={'quantity': 1}
-#         )
-#
-#         if not created:
-#             cart_item.quantity += 1
-#             cart_item.save()
-#
-#         return JsonResponse({
-#             'success': True,
-#             'message': 'Товар добавлен в корзину',
-#             'quantity': cart_item.quantity
-#         })
-#     except Exception as e:
-#         return JsonResponse({'success': False, 'error': str(e)}, status=500)
-#
-#
-# @login_required(login_url='/')
-# @require_POST
-# def update_cart_item(request):
-#     try:
-#         cart_item_id = request.POST.get('cart_item_id')
-#         quantity = int(request.POST.get('quantity', 1))
-#
-#         if quantity < 1:
-#             return JsonResponse({'success': False, 'error': 'Quantity must be at least 1'}, status=400)
-#
-#         cart_item = get_object_or_404(CartItem, id=cart_item_id, cart__user=request.user)
-#         cart_item.quantity = quantity
-#         cart_item.save()
-#
-#         # Пересчитываем общую стоимость
-#         cart = cart_item.cart
-#         cart_items = CartItem.objects.filter(cart=cart).select_related('product')
-#         total_amount = Decimal('0.00')
-#         for item in cart_items:
-#             total_amount += item.product.price * item.quantity
-#
-#         item_total = cart_item.product.price * cart_item.quantity
-#
-#         return JsonResponse({
-#             'success': True,
-#             'quantity': cart_item.quantity,
-#             'item_total': str(item_total),
-#             'total_amount': str(total_amount)
-#         })
-#     except Exception as e:
-#         return JsonResponse({'success': False, 'error': str(e)}, status=500)
-#
-#
-# @login_required(login_url='/')
-# @require_POST
-# def delete_from_cart(request):
-#     try:
-#         cart_item_id = request.POST.get('cart_item_id')
-#         cart_item = get_object_or_404(CartItem, id=cart_item_id, cart__user=request.user)
-#         cart_item.delete()
-#
-#         # Пересчитываем общую стоимость
-#         cart = cart_item.cart
-#         cart_items = CartItem.objects.filter(cart=cart).select_related('product')
-#         total_amount = Decimal('0.00')
-#         for item in cart_items:
-#             total_amount += item.product.price * item.quantity
-#
-#         return JsonResponse({
-#             'success': True,
-#             'total_amount': str(total_amount)
-#         })
-#     except Exception as e:
-#         return JsonResponse({'success': False, 'error': str(e)}, status=500)
-#
-#
-# @login_required(login_url='/')
-# @require_POST
-# def clear_cart(request):
-#     try:
-#         cart = get_object_or_404(Cart, user=request.user)
-#         CartItem.objects.filter(cart=cart).delete()
-#
-#         return JsonResponse({
-#             'success': True,
-#             'message': 'Корзина очищена'
-#         })
-#     except Exception as e:
-#         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+# Единый REST API эндпоинт для корзины /cart
+@swagger_auto_schema(
+    method='get',
+    operation_description="Получить корзину текущего пользователя в формате JSON. Пользователь может получить только свою корзину.",
+    responses={
+        200: openapi.Response(
+            description="Корзина успешно получена",
+            schema=CartSerializer
+        ),
+        401: openapi.Response(description="Пользователь не аутентифицирован"),
+    },
+    tags=['Cart']
+)
+@swagger_auto_schema(
+    method='post',
+    operation_description="Добавить товар в корзину. Требуется указать product_id в теле запроса.",
+    request_body=AddToCartSerializer,
+    responses={
+        200: openapi.Response(
+            description="Товар успешно добавлен в корзину",
+            examples={
+                "application/json": {
+                    "success": True,
+                    "message": "Товар добавлен в корзину",
+                    "quantity": 1,
+                    "cart": {
+                        "id": 1,
+                        "items": [],
+                        "total_amount": "1000.00"
+                    }
+                }
+            }
+        ),
+        400: openapi.Response(description="Ошибка валидации данных"),
+        401: openapi.Response(description="Пользователь не аутентифицирован"),
+        404: openapi.Response(description="Товар не найден"),
+    },
+    tags=['Cart']
+)
+@swagger_auto_schema(
+    method='put',
+    operation_description="Обновить количество товара в корзине. Требуется указать cart_item_id и quantity в теле запроса.",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'cart_item_id': openapi.Schema(type=openapi.TYPE_INTEGER, description='ID товара в корзине'),
+            'quantity': openapi.Schema(type=openapi.TYPE_INTEGER, description='Новое количество товара (минимум 1)'),
+        },
+        required=['cart_item_id', 'quantity']
+    ),
+    responses={
+        200: openapi.Response(
+            description="Количество товара успешно обновлено",
+            examples={
+                "application/json": {
+                    "success": True,
+                    "quantity": 2,
+                    "item_total": "2000.00",
+                    "total_amount": "2000.00",
+                    "cart": {}
+                }
+            }
+        ),
+        400: openapi.Response(description="Ошибка валидации данных"),
+        401: openapi.Response(description="Пользователь не аутентифицирован"),
+        404: openapi.Response(description="Товар в корзине не найден"),
+    },
+    tags=['Cart']
+)
+@swagger_auto_schema(
+    method='delete',
+    operation_description="Удалить товар из корзины или очистить корзину полностью. "
+                        "Если указан cart_item_id - удаляется конкретный товар, "
+                        "если cart_item_id не указан - очищается вся корзина.",
+    request_body=DeleteCartItemSerializer,
+    responses={
+        200: openapi.Response(
+            description="Товар успешно удален или корзина очищена",
+            examples={
+                "application/json": {
+                    "success": True,
+                    "message": "Товар удален из корзины",
+                    "total_amount": "0.00",
+                    "cart": {}
+                }
+            }
+        ),
+        401: openapi.Response(description="Пользователь не аутентифицирован"),
+        404: openapi.Response(description="Товар в корзине не найден"),
+    },
+    tags=['Cart']
+)
+@api_view(['GET', 'POST', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def cart_api(request):
+    """
+    Единый REST API эндпоинт для работы с корзиной.
+    
+    GET - получить корзину пользователя (JSON)
+    POST - добавить товар в корзину
+    PUT - обновить количество товара в корзине
+    DELETE - удалить товар из корзины или очистить корзину
+    """
+    try:
+        if request.method == 'GET':
+            # GET /cart - получить корзину пользователя (API)
+            cart_data = CartService.get_cart_with_items(request.user)
+            serializer = CartSerializer(cart_data['cart'])
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        elif request.method == 'POST':
+            # POST /cart - добавить товар в корзину
+            serializer = AddToCartSerializer(data=request.data)
+            if serializer.is_valid():
+                product_id = serializer.validated_data['product_id']
+                cart_item = CartService.add_to_cart(request.user, product_id)
+
+                # Получаем обновленные данные корзины
+                cart_data = CartService.get_cart_with_items(request.user)
+                cart_serializer = CartSerializer(cart_data['cart'])
+
+                return Response({
+                    "success": True,
+                    "message": "Товар добавлен в корзину",
+                    "quantity": cart_item.quantity,
+                    "cart": cart_serializer.data
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "success": False,
+                    "error": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        elif request.method == 'PUT':
+            # PUT /cart - обновить количество товара в корзине
+            cart_item_id = request.data.get('cart_item_id')
+            quantity = request.data.get('quantity')
+
+            if not cart_item_id:
+                return Response({
+                    "success": False,
+                    "error": "cart_item_id обязателен для обновления товара"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            serializer = UpdateCartItemSerializer(data={'quantity': quantity})
+            if serializer.is_valid():
+                quantity = serializer.validated_data['quantity']
+                cart_item = CartService.update_cart_item(request.user, cart_item_id, quantity)
+
+                # Получаем обновленные данные корзины
+                cart_data = CartService.get_cart_with_items(request.user)
+                cart_serializer = CartSerializer(cart_data['cart'])
+
+                item_total = cart_item.product.price * cart_item.quantity
+
+                return Response({
+                    "success": True,
+                    "quantity": cart_item.quantity,
+                    "item_total": str(item_total),
+                    "total_amount": str(cart_data['total_amount']),
+                    "cart": cart_serializer.data
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "success": False,
+                    "error": serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        elif request.method == 'DELETE':
+            # DELETE /cart - удалить товар из корзины или очистить корзину
+            cart_item_id = request.data.get('cart_item_id')
+
+            if cart_item_id:
+                # Удалить конкретный товар из корзины
+                cart_item = CartService.delete_from_cart(request.user, cart_item_id)
+
+                # Получаем обновленные данные корзины
+                cart_data = CartService.get_cart_with_items(request.user)
+                cart_serializer = CartSerializer(cart_data['cart'])
+
+                return Response({
+                    "success": True,
+                    "message": "Товар удален из корзины",
+                    "total_amount": str(cart_data['total_amount']),
+                    "cart": cart_serializer.data
+                }, status=status.HTTP_200_OK)
+            else:
+                # Очистить всю корзину
+                CartService.clear_cart(request.user)
+
+                # Получаем обновленные данные корзины
+                cart_data = CartService.get_cart_with_items(request.user)
+                cart_serializer = CartSerializer(cart_data['cart'])
+
+                return Response({
+                    "success": True,
+                    "message": "Корзина очищена",
+                    "cart": cart_serializer.data
+                }, status=status.HTTP_200_OK)
+
+    except Product.DoesNotExist:
+        return Response({
+            "success": False,
+            "error": "Товар не найден"
+        }, status=status.HTTP_404_NOT_FOUND)
+    except ValueError as e:
+        return Response({
+            "success": False,
+            "error": str(e)
+        }, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({
+            "success": False,
+            "error": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 def logout_view(request):
     logout(request)
     return redirect('index')
+
+
+# Эндпоинт для создания заказа
+@swagger_auto_schema(
+    method='post',
+    operation_description="Создать заказ из товаров в корзине пользователя. "
+                        "После успешного создания заказа корзина будет автоматически очищена. "
+                        "Тело запроса может быть пустым - заказ создается из текущей корзины.",
+    request_body=CreateOrderSerializer,
+    responses={
+        201: openapi.Response(
+            description="Заказ успешно создан",
+            schema=OrderSerializer,
+            examples={
+                "application/json": {
+                    "success": True,
+                    "message": "Заказ успешно создан",
+                    "order": {
+                        "id": 1,
+                        "user": 1,
+                        "status": "pending",
+                        "status_display": "Ожидает обработки",
+                        "total_amount": "50000.00",
+                        "created_at": "2024-01-15T10:30:00Z",
+                        "items": [
+                            {
+                                "id": 1,
+                                "product_id": 1,
+                                "product_name": "Шуба норковая",
+                                "quantity": 2,
+                                "price": "50000.00"
+                            }
+                        ]
+                    }
+                }
+            }
+        ),
+        400: openapi.Response(description="Корзина пуста или ошибка валидации"),
+        401: openapi.Response(description="Пользователь не аутентифицирован"),
+    },
+    tags=['Order']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_order(request):
+    """
+    Создать заказ из товаров в корзине пользователя.
+    
+    После успешного создания заказа корзина автоматически очищается.
+    """
+    try:
+        # Получаем корзину пользователя
+        cart_data = CartService.get_cart_with_items(request.user)
+        cart_items = cart_data['cart_items']
+        total_amount = cart_data['total_amount']
+
+        # Проверяем, что корзина не пуста
+        if not cart_items.exists():
+            return Response({
+                "success": False,
+                "error": "Корзина пуста. Невозможно создать заказ из пустой корзины."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Создаем заказ
+        order = Order.objects.create(
+            user=request.user,
+            status='pending',
+            total_amount=total_amount
+        )
+
+        # Создаем OrderItem для каждого товара в корзине
+        order_items = []
+        for cart_item in cart_items:
+            order_item = OrderItem.objects.create(
+                order=order,
+                product=cart_item.product,
+                quantity=cart_item.quantity,
+                price=cart_item.product.price  # Сохраняем цену на момент покупки
+            )
+            order_items.append(order_item)
+
+        # Очищаем корзину после создания заказа
+        CartService.clear_cart(request.user)
+
+        # Сериализуем заказ для ответа
+        serializer = OrderSerializer(order)
+
+        return Response({
+            "success": True,
+            "message": "Заказ успешно создан",
+            "order": serializer.data
+        }, status=status.HTTP_201_CREATED)
+
+    except Exception as e:
+        return Response({
+            "success": False,
+            "error": str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # API endpoins для задания

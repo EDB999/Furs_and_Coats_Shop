@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 
-from Furs_and_Coats_App.models import Product, Category, CartItem, Cart
+from Furs_and_Coats_App.models import Product, Category, CartItem, Cart, Order, OrderItem
 
 
 class ProductFilteredListSerializer(serializers.ModelSerializer):
@@ -69,3 +69,30 @@ class AddToCartSerializer(serializers.Serializer):
 
 class UpdateCartItemSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(min_value=1)
+
+
+class DeleteCartItemSerializer(serializers.Serializer):
+    cart_item_id = serializers.IntegerField(required=False, help_text="ID товара в корзине. Если не указан, корзина будет очищена полностью.")
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_id = serializers.IntegerField(source='product.id', read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = ['id', 'product_id', 'product_name', 'quantity', 'price']
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    items = OrderItemSerializer(many=True, read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'user', 'status', 'status_display', 'total_amount', 'created_at', 'items']
+
+
+class CreateOrderSerializer(serializers.Serializer):
+    """Serializer для создания заказа. Тело запроса может быть пустым - заказ создается из корзины пользователя."""
+    pass
